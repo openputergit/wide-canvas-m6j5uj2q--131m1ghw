@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Math Solver</title>
+    <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .clay-morphism {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 16px;
+            box-shadow: 
+                35px 35px 68px 0px rgba(145, 192, 255, 0.5),
+                inset -8px -8px 16px 0px rgba(145, 192, 255, 0.6),
+                inset 0px 11px 28px 0px rgb(255, 255, 255);
+        }
+        .speaking {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-sky-100 min-h-screen p-4">
+    <div class="max-w-3xl mx-auto">
+        <div class="clay-morphism p-6 mb-6">
+            <h1 class="text-2xl font-bold text-center text-sky-800 mb-4">AI Math Problem Solver</h1>
+            <p class="text-sky-700 text-center mb-4">Point your camera at a math problem and I'll help you solve it!</p>
+        </div>
+
+        <div class="clay-morphism p-6 mb-6">
+            <div class="relative aspect-video rounded-lg overflow-hidden mb-4">
+                <video id="video" class="w-full h-full object-cover" autoplay playsinline></video>
+                <button id="captureBtn" class="absolute bottom-4 right-4 bg-sky-500 hover:bg-sky-600 text-white rounded-full p-4 clay-morphism">
+                    <i class="bi bi-camera-fill text-2xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="resultContainer" class="clay-morphism p-6 hidden">
+            <div class="flex items-center mb-4">
+                <i id="speakerIcon" class="bi bi-volume-up text-3xl text-sky-600 mr-2"></i>
+                <h2 class="text-xl font-semibold text-sky-800">Solution:</h2>
+            </div>
+            <p id="solution" class="text-sky-700 text-lg"></p>
+        </div>
+    </div>
+
+    <script>
+        let video = document.getElementById('video');
+        let captureBtn = document.getElementById('captureBtn');
+        let resultContainer = document.getElementById('resultContainer');
+        let solution = document.getElementById('solution');
+        let speakerIcon = document.getElementById('speakerIcon');
+        
+        // Initialize camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                alert('Please enable camera access to use this app');
+            });
+
+        // Handle image capture and AI processing
+        captureBtn.addEventListener('click', async () => {
+            // Create canvas and capture image
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const imageBase64 = canvas.toDataURL('image/jpeg').split(',')[1];
+
+            // Show loading state
+            solution.textContent = "Analyzing problem...";
+            resultContainer.classList.remove('hidden');
+
+            try {
+                // Call AI endpoint for analysis
+                const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/ai', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ASsoF5EztXeH0uFoiPrsanuuQ6P2',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        messages: [{
+                            role: "user",
+                            content: [
+                                {
+                                    type: "text",
+                                    text: "Please analyze this math problem and provide a step-by-step solution in Hinglish language."
+                                },
+                                {
+                                    type: "image_url",
+                                    image_url: {
+                                        url: `data:image/jpeg;base64,${imageBase64}`
+                                    }
+                                }
+                            ]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Display solution
+                solution.textContent = data.message;
+                
+                // Text-to-speech in Hindi
+                speakerIcon.classList.add('speaking');
+                const speech = new SpeechSynthesisUtterance(data.message);
+                speech.lang = 'hi-IN';
+                speech.onend = () => speakerIcon.classList.remove('speaking');
+                window.speechSynthesis.speak(speech);
+
+            } catch (error) {
+                solution.textContent = "Sorry, there was an error processing your request. Please try again.";
+            }
+        });
+
+        // Handle speaker icon click to repeat speech
+        speakerIcon.addEventListener('click', () => {
+            if (solution.textContent && solution.textContent !== "Analyzing problem...") {
+                speakerIcon.classList.add('speaking');
+                const speech = new SpeechSynthesisUtterance(solution.textContent);
+                speech.lang = 'hi-IN';
+                speech.onend = () => speakerIcon.classList.remove('speaking');
+                window.speechSynthesis.speak(speech);
+            }
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
